@@ -20,10 +20,28 @@ public class WormWidget extends AppWidgetProvider {
     }
 
     @Override
-    public void onReceive(Context c, Intent i) {
+    public void onReceive(final Context c, Intent i) {
         super.onReceive(c, i);
-        if (ACT.equals(i.getAction())) Pet.press(c, i.getStringExtra("b"));
-        else if (REF.equals(i.getAction())) refresh(c);
+        String a = i.getAction();
+        if (ACT.equals(a)) {
+            final String b = i.getStringExtra("b");
+            final PendingResult pr = goAsync();
+            new Thread(() -> {
+                try {
+                    boolean react = Pet.press(c, b);
+                    if (react) {
+                        Thread.sleep(Pet.SHOW + 300);
+                        refresh(c);
+                    }
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    pr.finish();
+                }
+            }).start();
+        } else if (REF.equals(a)) {
+            refresh(c);
+        }
     }
 
     static void refresh(Context c) {
@@ -44,41 +62,37 @@ public class WormWidget extends AppWidgetProvider {
         am.set(AlarmManager.RTC, System.currentTimeMillis() + delayMs, pi);
     }
 
-    static int[] frames(Pet.St s, long now) {
-        int rx = (now - s.msgT < Pet.SHOW) ? s.rx : 0;
-        int one = 0;
-        switch (rx) {
-            case 1: one = R.drawable.w_eat; break;
-            case 2: one = R.drawable.w_full; break;
-            case 3: one = R.drawable.w_refuse; break;
-            case 4: one = R.drawable.w_love; break;
-            case 5: one = R.drawable.w_confused; break;
-            case 6: one = R.drawable.w_workout; break;
-            case 7: one = R.drawable.w_question; break;
-            default: break;
-        }
+    static int rid(Context c, String name) {
+        return c.getResources()
+            .getIdentifier(name, "drawable", c.getPackageName());
+    }
+
+    static int[] seq(Context c, String m) {
         int[] f = new int[8];
-        if (one == 0) {
-            String m = Pet.mood(s);
-            if (m.equals("Asleep")) one = R.drawable.w_sleep;
-            else if (m.equals("Sick")) one = R.drawable.w_hide;
-            else if (m.equals("Angry")) one = R.drawable.w_angry;
-            else if (m.equals("Hungry")) one = R.drawable.w_hungry;
-            else if (m.equals("Messy")) one = R.drawable.w_poop;
-            else if (m.equals("Sad")) one = R.drawable.w_sad;
-            else if (m.equals("Sleepy")) one = R.drawable.w_blink;
-            else if (m.equals("Happy")) {
-                return new int[]{R.drawable.w_bounce1, R.drawable.w_bounce2,
-                    R.drawable.w_bounce3, R.drawable.w_bounce4,
-                    R.drawable.w_bounce5, R.drawable.w_bounce6,
-                    R.drawable.w_bounce7, R.drawable.w_bounce8};
-            } else {
-                for (int i = 0; i < 8; i++) f[i] = R.drawable.w_idle;
-                f[5] = R.drawable.w_blink;
-                return f;
-            }
+        for (int i = 0; i < 8; i++) f[i] = rid(c, "an_" + m + "_" + (i % 4));
+        return f;
+    }
+
+    static int[] frames(Context c, Pet.St s, long now) {
+        String[] r = {"", "eat", "full", "refuse", "love",
+            "confused", "workout", "question"};
+        if (now - s.msgT < Pet.SHOW && s.rx > 0 && s.rx < r.length) {
+            return seq(c, r[s.rx]);
         }
-        for (int i = 0; i < 8; i++) f[i] = one;
+        String m = Pet.mood(s);
+        if (m.equals("Asleep")) return seq(c, "sleep");
+        if (m.equals("Sick")) return seq(c, "hide");
+        if (m.equals("Angry")) return seq(c, "angry");
+        if (m.equals("Hungry")) return seq(c, "hungry");
+        if (m.equals("Messy")) return seq(c, "poop");
+        if (m.equals("Sad")) return seq(c, "sad");
+        if (m.equals("Happy")) {
+            int[] f = new int[8];
+            for (int i = 0; i < 8; i++) f[i] = rid(c, "w_bounce" + (i + 1));
+            return f;
+        }
+        int[] f = seq(c, "idle");
+        f[5] = rid(c, "w_blink");
         return f;
     }
 
@@ -88,14 +102,18 @@ public class WormWidget extends AppWidgetProvider {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget);
         int[] ids = {R.id.f1, R.id.f2, R.id.f3, R.id.f4,
             R.id.f5, R.id.f6, R.id.f7, R.id.f8};
-        int[] f = frames(s, now);
+        int[] f = frames(c, s, now);
         for (int i = 0; i < 8; i++) v.setImageViewResource(ids[i], f[i]);
         v.setViewVisibility(R.id.menu_tag,
             s.mode == 1 ? View.VISIBLE : View.GONE);
         if (s.mode == 1) {
             v.setTextViewText(R.id.menu_tag, "> " + Pet.MENU[s.menu]);
         }
-        v.setTextViewText(R.id.panel, Pet.panel(s, now));
+        v.setTextViewText(R.id.stat_h, Pet.col("Hunger", s.hung));
+        v.setTextViewText(R.id.stat_j, Pet.col("Joy", s.joy));
+        v.setTextViewText(R.id.stat_s, Pet.col("Str", s.str));
+        v.setTextViewText(R.id.info, Pet.info(s, now));
+        v.setTextViewText(R.id.note, Pet.note(s, now));
         v.setOnClickPendingIntent(R.id.btn_a, btn(c, "A", 1));
         v.setOnClickPendingIntent(R.id.btn_b, btn(c, "B", 2));
         v.setOnClickPendingIntent(R.id.btn_c, btn(c, "C", 3));

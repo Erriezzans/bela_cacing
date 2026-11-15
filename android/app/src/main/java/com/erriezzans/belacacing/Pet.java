@@ -11,7 +11,7 @@ public class Pet {
     static final String[] MENU =
         {"FEED", "PLAY", "TRAIN", "CLEAN", "SLEEP", "HEAL"};
     static final long MIN = 60000L;
-    static final long SHOW = 9000L;
+    static final long SHOW = 5000L;
 
     static class St {
         int hung = 4, joy = 4, str = 2, poop, heals, mode, menu, rx;
@@ -110,7 +110,7 @@ public class Pet {
         s.lt = gap > steps ? now : s.lt + steps * MIN;
     }
 
-    static void press(Context c, String b) {
+    static boolean press(Context c, String b) {
         St s = current(c);
         long now = System.currentTimeMillis();
         s.msg = "";
@@ -130,7 +130,8 @@ public class Pet {
         }
         save(c, s);
         WormWidget.refresh(c);
-        if (!s.msg.isEmpty()) WormWidget.later(c, SHOW + 500);
+        if (!s.msg.isEmpty()) WormWidget.later(c, SHOW + 3000);
+        return !s.msg.isEmpty();
     }
 
     static void choose(St s, long now) {
@@ -250,6 +251,22 @@ public class Pet {
             l3 = n.isEmpty() ? "All good" : "Needs: " + n;
         }
         return l1 + "\n" + l2 + "\n" + l3;
+    }
+
+    static String col(String label, int n) {
+        return label + "\n" + hearts(n);
+    }
+
+    static String info(St s, long now) {
+        long day = (now - s.born) / 86400000L + 1;
+        return "Day " + day + "    Mood: " + mood(s);
+    }
+
+    static String note(St s, long now) {
+        if (s.mode != 0) return "Choose with A and B";
+        if (now - s.msgT < SHOW && !s.msg.isEmpty()) return s.msg;
+        String n = needs(s);
+        return n.isEmpty() ? "All good" : "Needs: " + n;
     }
 
     static String detail(St s, long now) {
