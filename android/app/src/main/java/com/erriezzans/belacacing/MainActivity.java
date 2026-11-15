@@ -38,6 +38,6 @@ public class MainActivity extends Activity {
     void show() {
         Pet.St s = Pet.current(this);
         long now = System.currentTimeMillis();
-        t.setText(Pet.line(s, now) + "\n\n" + Pet.detail(s, now));
+        t.setText(Pet.panel(s, now));
     }
 }
