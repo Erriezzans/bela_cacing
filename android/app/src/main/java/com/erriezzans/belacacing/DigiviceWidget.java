@@ -1,4 +1,4 @@
-package com.erriezzans.tuipet;
+package com.erriezzans.belacacing;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -11,8 +11,8 @@ import android.view.View;
 import android.widget.RemoteViews;
 
 public class DigiviceWidget extends AppWidgetProvider {
-    static final String ACT = "com.erriezzans.tuipet.ACTION";
-    static final String REF = "com.erriezzans.tuipet.REFRESH";
+    static final String ACT = "com.erriezzans.belacacing.ACTION";
+    static final String REF = "com.erriezzans.belacacing.REFRESH";
 
     @Override
     public void onUpdate(Context c, AppWidgetManager m, int[] ids) {

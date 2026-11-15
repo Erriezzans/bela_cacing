@@ -1,9 +1,9 @@
 plugins { id("com.android.application") }
 android {
-    namespace = "com.erriezzans.tuipet"
+    namespace = "com.erriezzans.belacacing"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.erriezzans.tuipet"
+        applicationId = "com.erriezzans.belacacing"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
