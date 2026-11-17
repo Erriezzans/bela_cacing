@@ -61,7 +61,7 @@ public class Pet {
             .apply();
     }
 
-    static St current(Context c) {
+    static synchronized St current(Context c) {
         St s = load(c);
         long now = System.currentTimeMillis();
         if (s.born == 0) { s.born = now; s.lt = now; }
@@ -110,7 +110,7 @@ public class Pet {
         s.lt = gap > steps ? now : s.lt + steps * MIN;
     }
 
-    static boolean press(Context c, String b) {
+    static synchronized boolean press(Context c, String b) {
         St s = current(c);
         long now = System.currentTimeMillis();
         s.msg = "";
@@ -123,7 +123,9 @@ public class Pet {
                 say(s, new SimpleDateFormat("HH:mm", Locale.US)
                     .format(new Date(now)), 0, now);
             }
-        } else {
+        } else if (s.mode == 4) {
+                rps(s, b, now);
+            } else {
             if (b.equals("A")) s.menu = (s.menu + 1) % MENU.length;
             else if (b.equals("C")) s.mode = 0;
             else choose(s, now);
@@ -152,9 +154,8 @@ public class Pet {
                 } else if (s.sick) {
                     say(s, "Not today", 3, now);
                 } else {
-                    boolean win = Math.random() < 0.5;
-                    s.joy = Math.min(4, s.joy + (win ? 2 : 1));
-                    say(s, win ? "Love it!" : "Hmm?", win ? 4 : 5, now);
+                    s.mode = 4;
+                    return;
                 }
                 break;
             case 2:
@@ -263,10 +264,37 @@ public class Pet {
     }
 
     static String note(St s, long now) {
+        if (s.mode == 4) return "Rock, paper or scissors?";
         if (s.mode != 0) return "Choose with A and B";
         if (now - s.msgT < SHOW && !s.msg.isEmpty()) return s.msg;
         String n = needs(s);
         return n.isEmpty() ? "All good" : "Needs: " + n;
+    }
+
+    static void rps(St s, String b, long now) {
+        int you = b.equals("A") ? 0 : b.equals("B") ? 1 : 2;
+        int worm = (int) (Math.random() * 3);
+        String[] nm = {"Rock", "Paper", "Scissors"};
+        int res = (you - worm + 3) % 3;
+        String m;
+        if (res == 0) {
+            s.joy = Math.min(4, s.joy + 1);
+            m = "Draw! Both " + nm[you];
+        } else if (res == 1) {
+            s.joy = Math.min(4, s.joy + 1);
+            m = "You win! " + nm[you] + " beats " + nm[worm];
+        } else {
+            s.joy = Math.min(4, s.joy + 2);
+            m = "Worm wins! " + nm[worm] + " beats " + nm[you];
+        }
+        say(s, m, 8 + worm, now);
+        s.mode = 0;
+    }
+
+    static String[] labels(St s) {
+        if (s.mode == 4) return new String[]{"A  rock", "B  paper", "C  cut"};
+        if (s.mode != 0) return new String[]{"A  next", "B  pick", "C  back"};
+        return new String[]{"A  menu", "B  time", "C  --"};
     }
 
     static String detail(St s, long now) {
